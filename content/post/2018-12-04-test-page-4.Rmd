@@ -1,0 +1,20 @@
+---
+title: test page 4
+author: Katie M. Brown
+date: '2018-12-04'
+output:
+  blogdown::html_page:
+    toc: true
+    fig_width: 6
+    dev: "svg"
+slug: test-page-4
+categories: []
+tags: []
+---
+
+1. test
+sdfkjaslkjas;dfas
+2. another test
+aslkdjf
+3. final test
+slkjdfasldkjf

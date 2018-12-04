@@ -1,0 +1,213 @@
+---
+title: "Data Cleaning in R: NAs"
+author: "Katie M. Brown"
+date: "November 29, 2018"
+output: html_document
+---
+
+## **Content Summary**
+1. A Brief Explanation
+2. The Dataset
+3. Test for NAs
+4. Techniques for Handling NAs
+    + Listwise Deletion
+    + Mean Substitution
+    + Regression Imputation
+    + LOCF (Last observation carried forward)
+    + Maximum Likelihood
+    + Expectation-Maximiation
+    + Multiple Imputation
+    + Sensitivity Analysis 
+
+## **A Brief Explanation**
+Data cleaning is a vital step in preparing data for analysis.  Part of data cleaning is dealing with missing values (NAs).  Technically speaking, an **NA** is a logical value with a length of 1 that indicates to us that there is a missing value.  In R, an **NA** value is different from an **NaN** value.  While the former indicates an error/missing value in your data before import, the latter indicates an arithmetic error such as 0/0.  **NA** stands for *Not Available* whereas **NaN** stands for *Not a Number*.
+
+## **The Dataset**
+The dataset we will be working with is a built in dataset called **airquality**.  We can find out more about **airquality** by checking the R Documentation.  You can find that here: [airquality](http://127.0.0.1:14320/help/library/datasets/html/airquality.html).  We can also look at the structure:
+
+```{r}
+str(airquality)
+```
+
+The data structure of airquality is a dataframe with 153 observations (rows) and 6 variables (columns).  Even while viewing the data structure, we can already see some NA values in **Ozone** and **Solar.R**.  Let's take a look at the first 6 rows of our data:
+
+```{r}
+head(airquality)
+```
+
+Let's do a calculation on the Ozone column.  Look what happens when we calculate the mean:
+
+```{r}
+mean(airquality$Ozone)
+```
+
+As you can see, this produces a value of **NA**. This will happen when we try to do any calculation on data that includes an NA value.  So let's get to cleaning!
+
+## **Test for NAs** 
+
+The function we can use to test if an object has NA values is called is.na( ).  We can pass it an object, like a vector, and it will return TRUE for each NA in the the vector.  Let's try a basic example.
+
+First we'll create a vector that has various NAs scattered throughout:
+```{r}
+vect1 <- c(1,2,3,NA,4,5,NA,6)
+```
+
+Now we will test to see the location of each of these NAs
+```{r}
+is.na(vect1)
+```
+
+As you can see from our test, is.na(vect1) returned a vector of length 6 that has TRUE and FALSE values.  As each TRUE is a 1 and each FALSE is a 0, we can calculate the number of NAs in our vector like this:
+
+```{r}
+sum(is.na(vect1))
+```
+
+Let's do the same thing for our dataset.  We can do this for the entire dataset or for each column:
+
+Number of NA values in airquality
+```{r}
+sum(is.na(airquality))
+```
+
+Applying the is.na to each column in airquality
+```{r}
+colSums(is.na(airquality))
+```
+
+From the named vector above, we see that 37 of the 44 NAs are in **Ozone** and 7 of the 44 are in **Solar.R**.  Now that we know more about the NAs in our dataset, let's start to deal with them.
+
+## **Techniques for Handling NAs**
+
+While the best way to handle data is to prevent the problem in the first place by using a well-planned study and carefully collecting data, in practice this is unlikely to happen all of the time.  Thus, a few techniques to handle missing will be discussed in this section.  These techniques, and others, are summarized in an article by Hyun Kang titled *The prevention and handling of the missing data*, which can be found [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3668100/).
+
+### 1. Casewise Deletion (aka) Listwise Deletion
+According to Kang, omitting the observations that contain missing values (NAs) is the most common approach to dealing with missing data.  There are some reasons this might not always be effective.  For example, if your sample size is small or if certain assumptions are not met, this technique may cause bias.  That being said, if our sample size is large enough and our assumptions are satisfied (we will not be discussing assumptions here), this is often an appropriate technique to utilize.
+
+We can use a function called na.omit( ) to remove rows that contain an NA value.  This function will return a dataframe with those rows omitted which we will store in a dataframe called **airq_omit**:
+
+```{r}
+airq_omit <- na.omit(airquality)
+```
+
+Let's look at **airq_omit** by observing the first 10 rows and then counting all the NAs
+```{r}
+head(airq_omit, 10)
+sum(is.na(airq_omit))
+```
+
+As you can see, we have removed all the missing values.  This is verified when we count them using the sum( ) function.  We can also see that 42 values are removed when we view the number of observations in our new dataframe **airq_omit** compared to **airquality**:
+
+```{r}
+nrow(airquality)
+nrow(airq_omit)
+```
+
+We can find the number of rows we omitted by subtracting:
+```{r}
+nrow(airquality) - nrow(airq_omit)
+```
+
+Here, we see that 42 of the original 44 counted NAs were removed.  This doesn't mean we missed a few, it simply means that 2 of the NAs that were counted in our original dataset are overlapping observations.
+
+Another method can be used to remove rows that contain missing values is to use the function complete.cases( ).  This is a very similar function to is.na( ) in that it returns a logical object (vector of TRUE/FALSE values) indicating the complete, or non-NA, observations.  Recall we created a vector of values that included 2 NAs above called vect1.  First, recall the vector that is returned when using is.na( ):
+ 
+```{r}
+is.na(vect1)
+```
+
+Now we will test to see where we have non-NA values.  As you can see, these functions produce exactly opposite logical vectors:
+```{r}
+complete.cases(vect1)
+```
+
+Another way to acheive this would be to use the ! operator on is.na( ):
+```{r}
+!is.na(vect1)
+```
+
+Now, we can use this idea to produce a dataframe with no missing values.  We will store this new dataframe in **airq_omit2**:
+```{r}
+airq_omit2 <- airquality[complete.cases(airquality),]
+```
+
+Let me break down the code above. When we pass a logical vector as a row index and leave the column index empty, only the rows where the complete.cases return TRUE will be returned. Therefore, the resulting dataframe, **airq_omit2** is identical to **airq_omit**.
+
+Once again, deleting rows in your data should only be done when certain assumptions are met (will be discussed at a later date) and if your sample size is large enough.
+
+### 2. Mean Substitution
+
+Mean substitution works as the name implies, by replacing missing values with the variable mean.  The mean is a reasonable estimate for a randomly selected observation from a normal distribution but missing data may not necessarily be random.  Therefore, this method of handling missing values is not generally accepted due to the amount of bias it could potentially create.
+
+We know there are missing values in Ozone and Solar.R.  Let's find the mean of each of these columns, disregarding missing values:
+```{r}
+meanOzone <- mean(airquality$Ozone, na.rm = T)
+meanSolar <- mean(airquality$Solar.R, na.rm = T)
+```
+
+The mean( ) function we are using here has a logical parameter called **na.rm** that, when set to TRUE, will calculate the mean while disregarding the missing values.
+
+Now that we have the means of the columns we want to modify, we can use the ifelse function to substitute the mean for the NA values in each variable.  The ifelse function has 3 parameters, the first is a logical expression, the second is the return value for true and the third is the return value for false.  This function will return a vector because we are specifically using vectors as arguments (Ozone column). See it in action:
+```{r}
+airq_mean <- airquality
+airq_mean$Ozone <- ifelse(is.na(airquality$Ozone), meanOzone ,airquality$Ozone)
+```
+
+For each observation in the Ozone column, we used is.na( ) to test for an NA.  If is.na( ) resulted in TRUE, that observation was replaced with **meanOzone**, it it resulted in FALSE, the value was preserved.  
+
+We can do the same for the Solar.R column:
+```{r}
+airq_mean$Solar.R <- ifelse(is.na(airquality$Solar.R), meanSolar ,airquality$Solar.R)
+```
+
+Let's look at the first 10 rows the new dataframe **airq_mean**:
+```{r}
+head(airq_mean, 10)
+```
+
+We can look at the number of observations by using the nrow( ) function and we can calculate the number of missing values like we did above:
+```{r}
+nrow(airq_mean)
+sum(is.na(airq_mean))
+```
+
+We were able to retain all our observations using this technique however, one should consider Mean Substitution carefully before using it as it could lead to problems.  The increase in sample size may come at a cost and bias may be considerable.
+
+*A similar method could be done using the median( ) function in place of the mean( ) function.
+
+### Regression Imputation
+
+We can replace the missing data with values estimated from a regression.  This approach allows us to keep all observations as the missing values are all replaced with a probable value.  This value is calculated from the other data in the set.
+
+To do this, we need to install, import and use a package called 'mice'.  We'll do so using the install.packages( ) funtion. To add this package to our 
+```{r eval=FALSE}
+install.packages(mice)
+```
+
+```{r,message=F}
+library(mice)
+```
+
+The **mice( )** function creates imputatations (replacement values) for multivariate missing data.  This function will do the work of finding the NAs and replacing them with an estimated value.  The norm.predict method imputes the best value according to the linear regression model.  The parameter *m* is set to 1 in this case but can be set to numbers greater than 1.
+
+```{r,results=F}
+imp <- mice(airquality,method="norm.predict", m=1)
+```
+
+The object that is returned from mice( ) is an object.  We stored this object in a variable called **imp** so we can use it later.  This object is not our resulting dataframe but we will use it to get the new dataframe, which we'll call **airq_imp**:
+
+```{r}
+airq_imp <- complete(imp)
+```
+
+The **complete( )** function takes an object like **imp**, fills in the missing data and returns a dataframe.  Let's look at the first 10 rows and count the number of NAs in our new dataframe:
+
+```{r}
+head(airq_imp,10)
+sum(is.na(airq_imp))
+```
+
+This method, like mean substitution, substitutes a value that is predicted from other variables.  Using other variables preserves the relationships among variables in imputations but a predicted value results in uncertainty about the true value.  While every statistic has uncertainty, statistics computed using imputed data, whether mean or regression, have even more uncertainty than standard error.  Consider this when using Regression Imputation to handle missing data.
+
+### LOCF: Last Observation Carried Forward
+
